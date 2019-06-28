@@ -152,10 +152,11 @@ Este método no crea un nuevo ambiente.
     [(list 'local (list e ...)  b)
      (lcal (map parse-def e) (parse b))]
     [(list 'class e ...) (class (map parse e) )]
-    [(list 'send e id b)(send (parse e)(parse id)(parse b))]
+    [(list 'send e id b ... )(send (parse e) id (map parse b))]
     [(list 'new e)(new (parse e))]
     [(list 'field x v)(field x (parse v))]
     [(list 'method x arg b)(method x arg (parse b))]
+    [(list 'get o x)(get (parse o) x)]
     ))
 
 
@@ -190,13 +191,13 @@ Este método no crea un nuevo ambiente.
        (interp body new-env))     
      ]
     [(class e)
-     (lambda ()
-                (let* ([scls Root]
-         ;[fields (append (scls 'all-fields)
-         ;                (list (cons 'f init) ...))]
-         [fields (make-fields e #t)]
-         [methods (make-fields e #f)
-          #|(local [(defmac (? fd) #:captures self
+     
+       (let* ([scls Root]
+              ;[fields (append (scls 'all-fields)
+              ;                (list (cons 'f init) ...))]
+              [fields (make-fields e #t)]
+              [methods (make-fields e #f)
+                       #|(local [(defmac (? fd) #:captures self
                     (vector-ref (obj-values self)
                                 (find-last 'fd fields)))
                   (defmac (! fd v) #:captures self
@@ -208,35 +209,44 @@ Este método no crea un nuevo ambiente.
             (list (cons 'm (λ (self)
                             (λ params body))) ...)
             )|#
-          ]
-         )
-    (letrec ([class (λ (msg . vals)
-                      (case msg
-                        [(all-fields) fields]
-                        [(create)
-                         (let ([values (list->vector (map cdr fields))])
-                           (begin
-                             (printf "~v " values)
-                             (obj class values)))]
-                        #;[(read)
-                           (vector-ref (obj-values (first vals))
-                                       (find-last (second vals) fields))]
-                        #;[(write)
-                           (vector-set! (obj-values (first vals))
-                                        (find-last (second vals) fields)
-                                        (third vals))]
-                        #;[(invoke)
-                           (let ((method (class 'lookup (second vals))))
-                             (apply (method (first vals)) (cddr vals)))]
-                        [(lookup)
-                         (let ([found (assoc (first vals) methods)])
-                           (begin
-                             (printf "~v " methods)
-                           (if found
-                               (cdr found)
-                               (scls 'lookup (first vals)))))]))])
-      class)))
-]
+                       ]
+              )
+         (letrec ([class (λ (msg . vals)
+                           (case msg
+                             [(all-fields) fields]
+                             [(create)
+                              (let ([values (list->vector (map cdr fields))])
+                                (begin
+                                  (printf "~v " values)
+                                  (obj class values)))]
+                             [(read)
+                                (vector-ref (obj-values (first vals))
+                                            (find-last (second vals) fields))]
+                             #;[(write)
+                                (vector-set! (obj-values (first vals))
+                                             (find-last (second vals) fields)
+                                             (third vals))]
+                             #;[(invoke)
+                                (let ((method (class 'lookup (second vals))))
+                                  (apply (method (first vals)) (cddr vals)))]
+                             [(lookup)
+                              (let ([found (assoc (first vals) methods)])
+                                (begin
+                                  (printf "~v " methods)
+                                  (if found
+                                      (cdr found)
+                                      (scls 'lookup (first vals)))))]))])
+           class))
+     ]
+    [(get o x)((obj-class (interp o env)) 'read (interp o env) x)]
+    [(new expr)((interp expr env) 'create )]
+    [(send o m arg)(let([object (interp o env)])
+                     (begin
+                       (def cl-body (((obj-class object) 'lookup m object) arg))
+                       (printf "~v ~n" (multi-extend-env (car cl-body) arg env))
+                       (interp (cdr cl-body) (multi-extend-env (car cl-body) (map (lambda(x) (interp x env)) arg) env)) ;(multi-extend-env (car cl-body) arg env)
+                       )
+                     )]
     ))
 
 ;; open-val :: Val -> Scheme Value
@@ -272,8 +282,16 @@ valores de MiniScheme para clases y objetos
   (match val
     [(numV n) n]
     [(boolV b) b]
+    [(num x) x]
     [x x]))
 
+
+(define (find-last name alist [rcont -1] [cont 0])
+  (match alist
+    ['() (if (equal? rcont -1) (error "field not found:" name) rcont)]
+    [(cons (cons f v) t) (if (equal? name f)
+                             (find-last name t cont  (+ cont 1))
+                             (find-last name t rcont (+ cont 1)))]))
 
 (define (make-fields l parameter)
   (if(empty? l)
@@ -283,6 +301,6 @@ valores de MiniScheme para clases y objetos
              (cons (cons (field-id (car l))(field-val (car l)))(make-fields (cdr l) parameter))
              (make-fields (cdr l) parameter))
          (if (method? (car l))
-             (cons (cons (method-id (car l))(lambda () (method-args (car l))(method-expr (car l))))(make-fields (cdr l) parameter))
+             (cons (cons (method-id (car l))(lambda (y) (cons (method-args (car l))(method-expr (car l)))))(make-fields (cdr l) parameter))
              (make-fields (cdr l) parameter)))
      ))
