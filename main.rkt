@@ -217,7 +217,10 @@ Este método no crea un nuevo ambiente.
                              [(create)
                               (let ([values (list->vector (map cdr fields))])
                                 (begin
-                                  (printf "~v " values)
+                                  ;(printf "~v " fields)
+                                  (set! fields (append fields (list (cons 'this (obj class values)))))
+                                  (printf "~v " fields)
+                                  ;(printf "this ~v " (append fields (list (cons 'this (obj class values)))))
                                   (obj class values)))]
                              [(read)
                                 (vector-ref (obj-values (first vals))
@@ -232,19 +235,21 @@ Este método no crea un nuevo ambiente.
                              [(lookup)
                               (let ([found (assoc (first vals) methods)])
                                 (begin
-                                  (printf "~v " methods)
+                                  ;(printf "~v " methods)
                                   (if found
                                       (cdr found)
                                       (scls 'lookup (first vals)))))]))])
            class))
      ]
-    [(get o x)((obj-class (interp o env)) 'read (interp o env) x)]
+    [(get o x)(interp ((obj-class (interp o env)) 'read (interp o env) x) env)]
     [(new expr)((interp expr env) 'create )]
     [(send o m arg)(let([object (interp o env)])
                      (begin
                        (def cl-body (((obj-class object) 'lookup m object) arg))
-                       (printf "~v ~n" (multi-extend-env (car cl-body) arg env))
-                       (interp (cdr cl-body) (multi-extend-env (car cl-body) (map (lambda(x) (interp x env)) arg) env)) ;(multi-extend-env (car cl-body) arg env)
+                       ;(printf "~v ~n" (multi-extend-env (car cl-body) arg env))
+                       (interp (cdr cl-body)
+                               (multi-extend-env '(this) (list object)
+                               (multi-extend-env (car cl-body) (map (lambda(x) (interp x env)) arg) env))) ;(multi-extend-env (car cl-body) arg env)
                        )
                      )]
     ))
@@ -304,3 +309,9 @@ valores de MiniScheme para clases y objetos
              (cons (cons (method-id (car l))(lambda (y) (cons (method-args (car l))(method-expr (car l)))))(make-fields (cdr l) parameter))
              (make-fields (cdr l) parameter)))
      ))
+
+(define (my-append l new-values)
+  (if (empty? l)
+      new-values
+      (cons (car l)(my-append (cdr l) new-values)))
+  )

@@ -180,4 +180,15 @@
          )
 
 ;------------------------ Pa probar la funcion make-fields ------------------------------------------------
-(list (field 'x (num 1)) (field 'y (num 2)) (method 'm '(y) (binop #<procedure:+> (id 'x) (id 'y))))         
+(list (field 'x (num 1)) (field 'y (num 2)) (method 'm '(y) (binop + (id 'x) (id 'y))))         
+
+; ----------------------- Pa probar el uso de this y de cuerpo de funciones complejas --------------------
+(run-val '(local
+              [(define x 10)
+               (define A
+                 (class
+                     (field u 7)
+                   (field v 8)
+                   (method m (y z) (+ (+ (+ (get this u) y) z) (get this v)))))
+               (define o (new A))]
+              (send o m 1 2)))
