@@ -157,6 +157,7 @@ Este método no crea un nuevo ambiente.
     [(list 'field x v)(field x (parse v))]
     [(list 'method x arg b)(method x arg (parse b))]
     [(list 'get o x)(get (parse o) x)]
+    [(list 'set o x v)(set (parse o) x (parse v))]
     ))
 
 
@@ -218,14 +219,14 @@ Este método no crea un nuevo ambiente.
                               (let ([values (list->vector (map cdr fields))])
                                 (begin
                                   ;(printf "~v " fields)
-                                  (set! fields (append fields (list (cons 'this (obj class values)))))
-                                  (printf "~v " fields)
+                                  ;(set! fields (append fields (list (cons 'this (obj class values)))))
+                                  ;(printf "~v " fields)
                                   ;(printf "this ~v " (append fields (list (cons 'this (obj class values)))))
                                   (obj class values)))]
                              [(read)
                                 (vector-ref (obj-values (first vals))
                                             (find-last (second vals) fields))]
-                             #;[(write)
+                             [(write)
                                 (vector-set! (obj-values (first vals))
                                              (find-last (second vals) fields)
                                              (third vals))]
@@ -235,13 +236,17 @@ Este método no crea un nuevo ambiente.
                              [(lookup)
                               (let ([found (assoc (first vals) methods)])
                                 (begin
-                                  ;(printf "~v " methods)
+                                  (printf "~v " methods)
                                   (if found
                                       (cdr found)
                                       (scls 'lookup (first vals)))))]))])
            class))
      ]
-    [(get o x)(interp ((obj-class (interp o env)) 'read (interp o env) x) env)]
+    [(get o x)(let ([val ((obj-class (interp o env)) 'read (interp o env) x)])
+                (if (num? val)
+                    (interp val env)
+                    val))]
+    [(set o x val)((obj-class(interp o env)) 'write (interp o env) x (interp val env))]
     [(new expr)((interp expr env) 'create )]
     [(send o m arg)(let([object (interp o env)])
                      (begin

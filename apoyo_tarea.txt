@@ -192,3 +192,44 @@
                    (method m (y z) (+ (+ (+ (get this u) y) z) (get this v)))))
                (define o (new A))]
               (send o m 1 2)))
+
+;---------------------- Test más complejo para probar el uso de this en diferentes clases-------------------
+(run-val '(local
+              [(define x 10)
+               (define A
+                 (class
+                     (field u 7)
+                   (field v 8)
+                   (method m (y z) (+ (+ (+ (get this u) y) z) (get this v)))))
+               (define B
+                 (class
+                     (field u 9)
+                   (field v 10)
+                   (method m (y z) (+ (+ (+ (get this u) y) z) (get this v)))))
+               (define o (new A))
+               (define p (new B))]
+              (+ (send o m 1 2)(send p m 3 4))))
+
+;------------------ More tests----------------
+(run-val '(local
+              [(define c (class
+                             (field x 1)
+                           (field y 2)
+                           (method sum (z) (+ (get this x) (+ (get this y) z)))
+                           (method set-x (val) (set this x val))))
+               (define o (new c))]
+              (seqn
+               (send o set-x (+ 1 3))
+               (get o x))))
+
+;--------------------------More test--------------------------------------------------------------------------
+(run-val '(local
+              [(define c (class
+                             (field x 1)
+                           (field y 2)
+                           (method sum (z) (+ (get this x) (+ (get this y) z)))
+                           (method set-x (val) (set this x val))))
+               (define o (new c))]
+              (seqn
+               (send o set-x (+ 1 3))
+               (+ (send o sum 3) (get o x)))))
