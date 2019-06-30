@@ -233,3 +233,26 @@
               (seqn
                (send o set-x (+ 1 3))
                (+ (send o sum 3) (get o x)))))
+
+;-------------------------------------------- Inheritance with super--------------------------------------------------------
+(run-val '(local
+      [(define c2 (class
+                      (method h (x) (+ x 1))))
+       (define c1 (class <: c2
+                    (method f () #f)))
+       (define c (class <: c1
+                   (method g () (super h 10))))
+       (define o (new c))]
+      (send o g)))
+
+;--------------------------------------- Field Shadowing----------------------------------------------------
+(run-val '(local
+              [(define A (class
+                             [field x 1]
+                           [field y 0]
+                           [method ax () (get this x)]))
+               (define B (class <: A
+                           [field x 2]
+                           [method bx () (get this x)]))
+               (define b (new B))]
+              (send b ax)))

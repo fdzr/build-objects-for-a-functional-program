@@ -63,7 +63,8 @@
   (send object method arg)
   (new expr)
   (get expr id)
-  (set e1 id e2))
+  (set e1 id e2)
+  (super m arg))
 
 ;; values
 (deftype Val
@@ -159,6 +160,7 @@ Este método no crea un nuevo ambiente.
     [(list 'method x arg b)(method x arg (parse b))]
     [(list 'get o x)(get (parse o) x)]
     [(list 'set o x v)(set (parse o) x (parse v))]
+    [(list 'super m arg ...)(super m (map parse arg))]
     ))
 
 
@@ -224,7 +226,7 @@ Este método no crea un nuevo ambiente.
                              [(create)
                               (let ([values (list->vector (map cdr fields))])
                                 (begin
-                                  ;(printf "~v " fields)
+                                  (printf "~v " fields)
                                   ;(set! fields (append fields (list (cons 'this (obj class values)))))
                                   ;(printf "~v " fields)
                                   ;(printf "this ~v " (append fields (list (cons 'this (obj class values)))))
@@ -239,10 +241,12 @@ Este método no crea un nuevo ambiente.
                              #;[(invoke)
                                 (let ((method (class 'lookup (second vals))))
                                   (apply (method (first vals)) (cddr vals)))]
+                             [(super)
+                              (scls 'lookup (first vals))]
                              [(lookup)
                               (let ([found (assoc (first vals) methods)])
                                 (begin
-                                  (printf "~v " methods)
+                                  ;(printf "~v " methods)
                                   (if found
                                       (cdr found)
                                       (scls 'lookup (first vals)))))]))])
@@ -263,6 +267,11 @@ Este método no crea un nuevo ambiente.
                                (multi-extend-env (car cl-body) (map (lambda(x) (interp x env)) arg) env))) ;(multi-extend-env (car cl-body) arg env)
                        )
                      )]
+    [(super m arg)(let ([object (interp (id 'this) env)])
+                    (let ([cl-body (((obj-class object) 'super m object) arg)])
+                      (interp (cdr cl-body) (multi-extend-env (car cl-body) (map (lambda(x) (interp x env)) arg) env)))
+                    
+                   )]
     ))
 
 ;; open-val :: Val -> Scheme Value
