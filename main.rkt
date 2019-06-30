@@ -37,7 +37,7 @@
 
 (struct obj (class values))
 
-(define Root
+(define Object
   (λ (msg . vals)
     (case msg
       [(lookup)     (error "method not found")]
@@ -152,6 +152,7 @@ Este método no crea un nuevo ambiente.
     [(list 'local (list e ...)  b)
      (lcal (map parse-def e) (parse b))]
     [(list 'class e ...) (class (map parse e) )]
+    ;[(list 'class '<: id e ...)(class id (map parse e))]
     [(list 'send e id b ... )(send (parse e) id (map parse b))]
     [(list 'new e)(new (parse e))]
     [(list 'field x v)(field x (parse v))]
@@ -193,10 +194,15 @@ Este método no crea un nuevo ambiente.
      ]
     [(class e)
      
-       (let* ([scls Root]
+       (let* ([scls (if(id? (car e))
+                       (interp (cadr e) env)
+                  Object)]
               ;[fields (append (scls 'all-fields)
               ;                (list (cons 'f init) ...))]
-              [fields (make-fields e #t)]
+              [fields (append (scls 'all-fields)
+                       (if (id? (car e))
+                           (make-fields (cddr e) #t)
+                           (make-fields e #t)))]
               [methods (make-fields e #f)
                        #|(local [(defmac (? fd) #:captures self
                     (vector-ref (obj-values self)
