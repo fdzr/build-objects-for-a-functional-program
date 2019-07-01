@@ -252,7 +252,20 @@
                            [field y 0]
                            [method ax () (get this x)]))
                (define B (class <: A
-                           [field x 2]
-                           [method bx () (get this x)]))
-               (define b (new B))]
-              (send b ax)))
+			[field x 2]
+			[method bx () (get this x)]))
+		(define b (new B))]
+		(send b ax)))
+;--------------------------------------- Test this ------------------------------------------------------------
+(run-val '(local
+              [(define x 10)
+               (define A
+                 (class
+                     (field q 1)
+                   (method set-q (x) (set this q x))
+                   (method get-q () (get this q))
+                     (method m (y) (+ x y))))
+               (define o (new A))]
+              (seqn
+               (send o set-q 2)
+               (send o get-q))))
