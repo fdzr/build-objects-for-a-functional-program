@@ -41,7 +41,8 @@
   (λ (msg . vals)
     (case msg
       [(lookup)     (error "method not found")]
-      [(all-fields) '()] 
+      [(all-fields) '()]
+      [(root) #t]
       [else (error "root class: should not happen: " msg)])))
 
 
@@ -226,14 +227,19 @@ Este método no crea un nuevo ambiente.
                              [(create)
                               (let ([values (list->vector (map cdr fields))])
                                 (begin
-                                  (printf "~v " fields)
+                                  (printf "FIELDS ~v~n " fields)
+                                  (printf "VALUES ~v~n " values)
                                   ;(set! fields (append fields (list (cons 'this (obj class values)))))
+                                  ;(printf "~v class root " (scls 'root))
                                   ;(printf "~v " fields)
                                   ;(printf "this ~v " (append fields (list (cons 'this (obj class values)))))
                                   (obj class values)))]
                              [(read)
+                              (begin
+                                (printf "Vals ~v~n" vals)
+                                (printf "obj-values ~v~n" (obj-class (first vals)))
                                 (vector-ref (obj-values (first vals))
-                                            (find-last (second vals) fields))]
+                                            (find-last (second vals) fields)))]
                              [(write)
                                 (vector-set! (obj-values (first vals))
                                              (find-last (second vals) fields)
@@ -248,7 +254,10 @@ Este método no crea un nuevo ambiente.
                                 (begin
                                   ;(printf "~v " methods)
                                   (if found
-                                      (cdr found)
+                                      (begin
+                                       (printf "valuessss ~v~n " values)
+                                      (cons (class 'create) (cdr found)))
+                                      ;(cdr found)
                                       (scls 'lookup (first vals)))))]))])
            class))
      ]
@@ -260,15 +269,25 @@ Este método no crea un nuevo ambiente.
     [(new expr)((interp expr env) 'create )]
     [(send o m arg)(let([object (interp o env)])
                      (begin
-                       (def cl-body (((obj-class object) 'lookup m object) arg))
+                       ;(printf "object ~v~n" object)
+                       (def cl-body1 ((obj-class object) 'lookup m object))
+                       ;(printf "bodyyy ~v~n" cl-body1)
+                       (def cl-body ((cdr cl-body1)))
+                       ;(printf "cl-body ~v~n" cl-body)
+                       ;(printf "cl-body1 ~v~n" ((car cl-body1)))
                        ;(printf "~v ~n" (multi-extend-env (car cl-body) arg env))
+                       ;(def cl-body (cadr cl-body1))
                        (interp (cdr cl-body)
-                               (multi-extend-env '(this) (list object)
+                               (multi-extend-env '(this) (if (equal? ((obj-class (car cl-body1)) 'root) #t)
+                                                             (list ((obj-class object) 'lookup m object))
+                                                             (list (car cl-body1)))
                                (multi-extend-env (car cl-body) (map (lambda(x) (interp x env)) arg) env))) ;(multi-extend-env (car cl-body) arg env)
                        )
                      )]
     [(super m arg)(let ([object (interp (id 'this) env)])
-                    (let ([cl-body (((obj-class object) 'super m object) arg)])
+                    (printf "super ~v~n " object)
+                    (let ([cl-body1 ((obj-class object) 'super m object)])
+                      (def cl-body ((cdr cl-body1)))
                       (interp (cdr cl-body) (multi-extend-env (car cl-body) (map (lambda(x) (interp x env)) arg) env)))
                     
                    )]
@@ -326,7 +345,7 @@ valores de MiniScheme para clases y objetos
              (cons (cons (field-id (car l))(field-val (car l)))(make-fields (cdr l) parameter))
              (make-fields (cdr l) parameter))
          (if (method? (car l))
-             (cons (cons (method-id (car l))(lambda (y) (cons (method-args (car l))(method-expr (car l)))))(make-fields (cdr l) parameter))
+             (cons (cons (method-id (car l))(lambda () (cons (method-args (car l))(method-expr (car l)))))(make-fields (cdr l) parameter))
              (make-fields (cdr l) parameter)))
      ))
 
