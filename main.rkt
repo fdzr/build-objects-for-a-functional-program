@@ -227,8 +227,8 @@ Este método no crea un nuevo ambiente.
                              [(create)
                               (let ([values (list->vector (map cdr fields))])
                                 (begin
-                                  (printf "FIELDS ~v~n " fields)
-                                  (printf "VALUES ~v~n " values)
+                                  ;(printf "FIELDS ~v~n " fields)
+                                  ;(printf "VALUES ~v~n " values)
                                   ;(set! fields (append fields (list (cons 'this (obj class values)))))
                                   ;(printf "~v class root " (scls 'root))
                                   ;(printf "~v " fields)
@@ -236,8 +236,8 @@ Este método no crea un nuevo ambiente.
                                   (obj class values)))]
                              [(read)
                               (begin
-                                (printf "Vals ~v~n" vals)
-                                (printf "obj-values ~v~n" (obj-class (first vals)))
+                                ;(printf "Vals ~v~n" vals)
+                                ;(printf "obj-values ~v~n" (obj-class (first vals)))
                                 (vector-ref (obj-values (first vals))
                                             (find-last (second vals) fields)))]
                              [(write)
@@ -247,6 +247,7 @@ Este método no crea un nuevo ambiente.
                              #;[(invoke)
                                 (let ((method (class 'lookup (second vals))))
                                   (apply (method (first vals)) (cddr vals)))]
+                             [(field) fields]
                              [(super)
                               (scls 'lookup (first vals))]
                              [(lookup)
@@ -255,10 +256,15 @@ Este método no crea un nuevo ambiente.
                                   ;(printf "~v " methods)
                                   (if found
                                       (begin
-                                       (printf "valuessss ~v~n " values)
-                                      (cons (class 'create) (cdr found)))
+                                       ;(printf "valuessss ~v~n " values)
+                                       ;(printf "class ~v~n" (class 'field))
+                                        
+                                      (cons class (cdr found)))
                                       ;(cdr found)
-                                      (scls 'lookup (first vals)))))]))])
+                                      (begin
+                                        ;(printf "class ~v~n" (class 'field))
+                                        (scls 'lookup (first vals)))
+                                      )))]))])
            class))
      ]
     [(get o x)(let ([val ((obj-class (interp o env)) 'read (interp o env) x)])
@@ -269,18 +275,20 @@ Este método no crea un nuevo ambiente.
     [(new expr)((interp expr env) 'create )]
     [(send o m arg)(let([object (interp o env)])
                      (begin
-                       ;(printf "object ~v~n" object)
+                       ;(printf " ~v~n " (cdr))
                        (def cl-body1 ((obj-class object) 'lookup m object))
+                       (printf "vector-full ~v~n" (obj-values object))
+                       ;(printf "Vector ~v~n" (obj-values(car cl-body1)))
                        ;(printf "bodyyy ~v~n" cl-body1)
                        (def cl-body ((cdr cl-body1)))
                        ;(printf "cl-body ~v~n" cl-body)
                        ;(printf "cl-body1 ~v~n" ((car cl-body1)))
                        ;(printf "~v ~n" (multi-extend-env (car cl-body) arg env))
                        ;(def cl-body (cadr cl-body1))
+                       ;(printf "~v~n" ((obj-class (car cl-body1)) 'root))
                        (interp (cdr cl-body)
-                               (multi-extend-env '(this) (if (equal? ((obj-class (car cl-body1)) 'root) #t)
-                                                             (list ((obj-class object) 'lookup m object))
-                                                             (list (car cl-body1)))
+                               (multi-extend-env '(this) (list (obj (car cl-body1) (obj-values object)))
+                                                             
                                (multi-extend-env (car cl-body) (map (lambda(x) (interp x env)) arg) env))) ;(multi-extend-env (car cl-body) arg env)
                        )
                      )]
