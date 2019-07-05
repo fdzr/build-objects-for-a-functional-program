@@ -159,6 +159,8 @@ Este método no crea un nuevo ambiente.
     [(list 'get o x)(get (parse o) x)]
     [(list 'set o x v)(set (parse o) x (parse v))]
     [(list 'super m arg ...)(super m (map parse arg))]
+    [(list 'fun x body)(class (list (method 'fun x (parse body))))]
+    [(list x y ...)(send (new (parse x)) 'fun (map parse y))]
     ))
 
 

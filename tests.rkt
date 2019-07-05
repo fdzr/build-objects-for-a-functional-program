@@ -1,6 +1,6 @@
 #lang play
 (require "main.rkt")
-(print-only-errors)
+;(print-only-errors)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;                                 TESTS BASE                                  ;
@@ -95,6 +95,56 @@
                )
               )
            ) 22)
+
+(test (run-val '(local
+                  [(define x 10)
+                   (define q (fun (a b)
+                                  (+ a b)))
+                   (define A
+                     (class
+                         (method m (y) (+ x y))))
+                   (define o (new A))]
+                  (+
+                   (q 23 24)
+                   (send o m 1)))) 58)
+
+(test (run-val '(local
+                  [(define x 10)
+                   (define q (fun (a b)
+                                  (+ a b)))
+                   (define A
+                     (class
+                         (method m (y) (+ (q 1 2) y))))
+                   (define o (new A))]
+                  (send o m 1))) 4)
+
+(test (run-val '(local
+                  [(define f (fun (x)
+                                  (+ x x)))]
+                  (f 5))) 10)
+
+(test (run-val '(local
+                  [(define x 10)
+                   (define q (fun (a b)
+                                  (+ a b)))
+                   (define A
+                     (class
+                         (method m (y) (+ x y))))
+                   (define o (new A))]
+              
+                  (q (send o m 1) 24)
+                  )) 35)
+
+(test (run-val '(local
+                  [(define x 10)
+                   (define q (fun (a b)
+                                  (+ (send (new a) m 10) b)))
+                   (define A
+                     (class
+                         (method m (y) (+ x y))))
+                   ]
+                  (q A 24)
+                  )) 44)
 
 (test (make-fields
        (list (field 'x (num 1)) (field 'y (num 0)) (method 'ax '() (get (id 'this) 'x))) #t)
